@@ -1,6 +1,6 @@
 const path = require("path");
 const matches = require("../app/data/friends");
-const MAX_DIFF = 3;
+const MAX_DIFF = 50;
 
 module.exports = function(app) {
     app.get("/api/friends", function(req, res) {
@@ -18,22 +18,33 @@ module.exports = function(app) {
 
 function findMatch(newMatch,res) {
     let name = newMatch.name,
-        scores = newMatch.scores,
+        totalDifferences = [],
+        bestMatchIdx = -1,
+        bestMatchScore = MAX_DIFF;
+        newMatchScores = newMatch.scores,
         candidates = matches.filter(function(match) {
             return match.name !== name; 
         });
 
-    let foundMatch = candidates.find(function(potentMatch, idx) {
-        let diff = [],
-            matchScores = potentMatch.scores;
-        
-        for(let i = 0; i < matchScores.length; ++i)
-            diff.push(Math.abs(parseInt(scores[i]) - parseInt(matchScores[i]))); 
+    for(let i = 0; i <   candidates.length; ++i) {
+        let diffArr = [];
+        for(let j = 0; j < candidates[i].scores.length; ++j) {
+            let diff = Math.abs(newMatchScores[j] - candidates[i].scores[j]);
 
-        let sum = diff.reduce(function(acc,currVal) { return Math.abs(acc - currVal)}, 0);
-        return sum <= MAX_DIFF;
+            diffArr.push(diff);
+        }   
+        totalDifferences.push(diffArr.reduce(function(acc,val) { return acc + val; }));
+        //console.log(totalDifferences);
+    }
+
+    totalDifferences.forEach( function(diff,idx) {
+        if(diff < bestMatchScore) {
+            bestMatchIdx = idx;
+            bestMatchScore = diff; 
+            //console.log("New Match Found at Index:",idx);
+        }
     });
 
-    //console.log(foundMatch);
-    res.send(foundMatch).end();
+    //console.log(candidates[bestMatchIdx]);
+    res.send(candidates[bestMatchIdx]).end();
 }
